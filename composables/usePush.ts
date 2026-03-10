@@ -20,6 +20,9 @@ export const usePush = () => {
       );
       enabled.value = Boolean(subscription);
       return enabled.value;
+    } catch {
+      enabled.value = false;
+      return false;
     } finally {
       loading.value = false;
     }

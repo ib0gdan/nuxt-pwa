@@ -25,6 +25,22 @@ export const requestNotificationsPermission =
     return Notification.requestPermission();
   };
 
+const waitForServiceWorkerReady = async (
+  timeoutMs = 10000,
+): Promise<ServiceWorkerRegistration> => {
+  const existing = await navigator.serviceWorker.getRegistration();
+  if (existing) {
+    return existing;
+  }
+
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Service worker is not ready")), timeoutMs);
+    }),
+  ]);
+};
+
 export const ensurePushSubscription = async (
   vapidKey: string,
   userId: string,
@@ -43,7 +59,7 @@ export const ensurePushSubscription = async (
     return null;
   }
 
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await waitForServiceWorkerReady();
   const existing = await registration.pushManager.getSubscription();
   const subscription =
     existing ||
@@ -53,12 +69,15 @@ export const ensurePushSubscription = async (
     }));
 
   const payload = serializeSubscription(subscription);
-  await fetch(subscribeUrl, {
+  const response = await fetch(subscribeUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ subscription: payload, userId }),
   });
+  if (!response.ok) {
+    throw new Error("Failed to save push subscription");
+  }
   return payload;
 };

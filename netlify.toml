@@ -1,6 +1,6 @@
 [build]
-  command = "yarn build && mkdir -p .netlify/static && cp -R node_modules/.cache/nuxt/.nuxt/dist/client/. .netlify/static && cp -R public/. .netlify/static"
-  publish = ".netlify/static"
+  command = "yarn build"
+  publish = "dist"
 
 [functions]
   directory = "netlify/functions"

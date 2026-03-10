@@ -45,6 +45,18 @@ const requestNotificationsPermission = async () => {
   }
   return Notification.requestPermission();
 };
+const waitForServiceWorkerReady = async (timeoutMs = 1e4) => {
+  const existing = await (void 0).serviceWorker.getRegistration();
+  if (existing) {
+    return existing;
+  }
+  return Promise.race([
+    (void 0).serviceWorker.ready,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Service worker is not ready")), timeoutMs);
+    })
+  ]);
+};
 const ensurePushSubscription = async (vapidKey, userId, subscribeUrl = "/api/push/subscribe") => {
   if (!("serviceWorker" in void 0) || !("PushManager" in void 0)) {
     return null;
@@ -56,20 +68,23 @@ const ensurePushSubscription = async (vapidKey, userId, subscribeUrl = "/api/pus
   if (permission !== "granted") {
     return null;
   }
-  const registration = await (void 0).serviceWorker.ready;
+  const registration = await waitForServiceWorkerReady();
   const existing = await registration.pushManager.getSubscription();
   const subscription = existing || await registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: base64ToUint8Array(vapidKey)
   });
   const payload = serializeSubscription(subscription);
-  await fetch(subscribeUrl, {
+  const response = await fetch(subscribeUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({ subscription: payload, userId })
   });
+  if (!response.ok) {
+    throw new Error("Failed to save push subscription");
+  }
   return payload;
 };
 const usePush = () => {
@@ -90,6 +105,9 @@ const usePush = () => {
       );
       enabled.value = Boolean(subscription);
       return enabled.value;
+    } catch {
+      enabled.value = false;
+      return false;
     } finally {
       loading.value = false;
     }
@@ -130,4 +148,4 @@ _sfc_main.setup = (props, ctx) => {
 };
 
 export { _sfc_main as default };
-//# sourceMappingURL=settings-C0JTeTfA.mjs.map
+//# sourceMappingURL=settings-B-RTvuJZ.mjs.map
