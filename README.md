@@ -61,7 +61,7 @@ yarn build
 
 1. Подключите репозиторий в Netlify.
 2. Build command: `yarn build`.
-3. Publish directory: `.output/public`.
+3. Publish directory: не задавайте вручную (Nuxt Nitro preset `netlify` сам формирует корректный output).
 4. Functions directory: `netlify/functions` (уже задано в `netlify.toml`).
 5. Добавьте env-переменные из `.env.example` в Netlify UI.
 6. Убедитесь, что функция `sendReminder` доступна как Scheduled Function (каждую минуту).
