@@ -1,0 +1,11 @@
+[build]
+  command = "yarn build"
+  publish = ".output/public"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[build.environment]
+  NITRO_PRESET = "netlify"
+
