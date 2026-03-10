@@ -6,4 +6,5 @@
   node_bundler = "esbuild"
 
 [build.environment]
+  NODE_VERSION = "20"
   NITRO_PRESET = "netlify"
