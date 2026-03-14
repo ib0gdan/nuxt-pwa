@@ -429,7 +429,7 @@ const _routes = [
   {
     name: "settings",
     path: "/settings",
-    component: () => import('./settings-B-RTvuJZ.mjs')
+    component: () => import('./settings-DCZE2UDs.mjs')
   },
   {
     name: "analytics",

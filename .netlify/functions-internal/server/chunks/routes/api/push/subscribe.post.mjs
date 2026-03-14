@@ -1,5 +1,5 @@
 import { d as defineEventHandler, r as readBody, c as createError } from '../../../nitro/nitro.mjs';
-import { s as saveSubscription } from '../../../_/storage.mjs';
+import { c as saveSubscription } from '../../../_/storage.mjs';
 import 'node:http';
 import 'node:https';
 import 'node:events';

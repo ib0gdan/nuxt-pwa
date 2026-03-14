@@ -91,6 +91,12 @@ const usePush = () => {
   const config = useRuntimeConfig();
   const enabled = useState("push-enabled", () => false);
   const loading = ref(false);
+  const syncPushStatus = async () => {
+    {
+      enabled.value = false;
+      return false;
+    }
+  };
   const enablePush = async () => {
     loading.value = true;
     try {
@@ -105,7 +111,8 @@ const usePush = () => {
       );
       enabled.value = Boolean(subscription);
       return enabled.value;
-    } catch {
+    } catch (error) {
+      console.error("Error enabling push:", error);
       enabled.value = false;
       return false;
     } finally {
@@ -115,7 +122,8 @@ const usePush = () => {
   return {
     enabled,
     loading,
-    enablePush
+    enablePush,
+    syncPushStatus
   };
 };
 const _sfc_main = /* @__PURE__ */ defineComponent({
@@ -148,4 +156,4 @@ _sfc_main.setup = (props, ctx) => {
 };
 
 export { _sfc_main as default };
-//# sourceMappingURL=settings-B-RTvuJZ.mjs.map
+//# sourceMappingURL=settings-DCZE2UDs.mjs.map

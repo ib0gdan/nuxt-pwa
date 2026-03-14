@@ -4067,7 +4067,7 @@ function _expandFromEnv(value) {
 const _inlineRuntimeConfig = {
   "app": {
     "baseURL": "/",
-    "buildId": "a23f4db7-7482-43e2-9a14-b38bcca26420",
+    "buildId": "eef832d7-7daa-4580-b0ea-f81a6036665b",
     "buildAssetsDir": "/_nuxt/",
     "cdnURL": ""
   },
@@ -4096,10 +4096,10 @@ const _inlineRuntimeConfig = {
   },
   "public": {
     "apiBase": "/api",
-    "webPushPublicKey": ""
+    "webPushPublicKey": "BFPa6R9SvWeRu-4S6bnFpuPMK-YvxIyVj2eVXAui2LegOMPlCwSX0FKfagm6QuXt7OADCqCvpdM4ECbV0mImnpQ"
   },
-  "webPushPrivateKey": "",
-  "webPushPublicKey": "",
+  "webPushPrivateKey": "rPVNFhXG95I9XLaUk9w7l4xj_1ipsr1q9GQRJCjMj08",
+  "webPushPublicKey": "BFPa6R9SvWeRu-4S6bnFpuPMK-YvxIyVj2eVXAui2LegOMPlCwSX0FKfagm6QuXt7OADCqCvpdM4ECbV0mImnpQ",
   "webPushSubject": "mailto:admin@vibe-sync.app"
 };
 const envOptions = {
@@ -4519,11 +4519,13 @@ const plugins = [
 
 const _SxA8c9 = defineEventHandler(() => {});
 
+const _lazy_evl6Y_ = () => import('../routes/api/debug/trigger.get.mjs');
 const _lazy_XgTuza = () => import('../routes/api/push/subscribe.post.mjs');
 const _lazy_MUW7dE = () => import('../routes/api/reminders/sync.post.mjs');
 const _lazy_APohPe = () => import('../routes/renderer.mjs').then(function (n) { return n.r; });
 
 const handlers = [
+  { route: '/api/debug/trigger', handler: _lazy_evl6Y_, lazy: true, middleware: false, method: "get" },
   { route: '/api/push/subscribe', handler: _lazy_XgTuza, lazy: true, middleware: false, method: "post" },
   { route: '/api/reminders/sync', handler: _lazy_MUW7dE, lazy: true, middleware: false, method: "post" },
   { route: '/__nuxt_error', handler: _lazy_APohPe, lazy: true, middleware: false, method: undefined },

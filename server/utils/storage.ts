@@ -85,3 +85,11 @@ export const saveSubscription = async (
 export const getSubscription = async (userId: string): Promise<PushSubscriptionPayload | null> => {
   return readJson<PushSubscriptionPayload | null>(`subscription:${userId}`, null);
 };
+
+export const getDeliveredIds = async (userId: string): Promise<string[]> => {
+  return readJson<string[]>(`delivered:${userId}`, []);
+};
+
+export const saveDeliveredIds = async (userId: string, ids: string[]): Promise<void> => {
+  await writeJson(`delivered:${userId}`, ids);
+};

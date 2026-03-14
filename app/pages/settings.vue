@@ -8,17 +8,18 @@ import { useRemindersStore } from "../../stores/reminders";
 
 const remindersStore = useRemindersStore();
 const { syncStatus } = storeToRefs(remindersStore);
-const { enabled, loading, enablePush } = usePush();
+const { enabled, loading, enablePush, syncPushStatus } = usePush();
 const { mode, initTheme, toggle } = useTheme();
 const { addToast: push } = useToasts();
 
-onMounted(() => {
+onMounted(async () => {
   initTheme();
+  await syncPushStatus();
 });
 
 const activatePush = async () => {
   const ok = await enablePush();
-  push(ok ? "Push включены" : "Push не разрешены", ok ? "success" : "error");
+  push(ok ? "Push включены" : "Push не подключены", ok ? "success" : "error");
 };
 </script>
 

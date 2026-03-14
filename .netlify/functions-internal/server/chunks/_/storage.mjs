@@ -47,9 +47,28 @@ const getUserReminders = async (userId) => {
 const setUserReminders = async (userId, reminders) => {
   await writeJson(`reminders:${userId}`, reminders);
 };
+const getAllReminderEntries = async () => {
+  const listed = await store.list({ prefix: "reminders:" });
+  const entries = await Promise.all(
+    listed.blobs.map(async (blob) => ({
+      userId: blob.key.replace("reminders:", ""),
+      reminders: await getUserReminders(blob.key.replace("reminders:", ""))
+    }))
+  );
+  return entries;
+};
 const saveSubscription = async (userId, subscription) => {
   await writeJson(`subscription:${userId}`, subscription);
 };
+const getSubscription = async (userId) => {
+  return readJson(`subscription:${userId}`, null);
+};
+const getDeliveredIds = async (userId) => {
+  return readJson(`delivered:${userId}`, []);
+};
+const saveDeliveredIds = async (userId, ids) => {
+  await writeJson(`delivered:${userId}`, ids);
+};
 
-export { setUserReminders as a, getUserReminders as g, saveSubscription as s };
+export { getSubscription as a, getDeliveredIds as b, saveSubscription as c, getUserReminders as d, setUserReminders as e, getAllReminderEntries as g, saveDeliveredIds as s };
 //# sourceMappingURL=storage.mjs.map
