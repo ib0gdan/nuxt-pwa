@@ -137,6 +137,7 @@ const useRemindersStore = defineStore("reminders", {
     reminders: [],
     loading: true,
     error: null,
+    storageMode: "indexeddb",
     filter: "all",
     sortDirection: "asc",
     syncStatus: initialSyncStatus
@@ -164,6 +165,20 @@ const useRemindersStore = defineStore("reminders", {
     }
   },
   actions: {
+    async syncThroughApi(operations) {
+      const response = await fetch("/api/reminders/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operations, userId: getClientId() })
+      });
+      if (!response.ok) {
+        throw new Error("Failed to sync reminders via API");
+      }
+      const data = await response.json();
+      this.reminders = data.reminders;
+      this.syncStatus.lastSyncedAt = (/* @__PURE__ */ new Date()).toISOString();
+      return data.reminders;
+    },
     async init() {
       try {
         this.error = null;
@@ -175,14 +190,55 @@ const useRemindersStore = defineStore("reminders", {
         this.syncStatus.lastSyncedAt = lastSynced?.value ?? null;
       } catch (err) {
         console.error("Critical DB Error:", err);
-        this.error = "Ошибка доступа к локальной базе данных. Попробуйте очистить место на устройстве или перезагрузить страницу.";
+        this.storageMode = "network";
+        this.error = "Локальная база недоступна. Переключено на сетевой режим без офлайн-кеша.";
+        if (this.syncStatus.online) {
+          try {
+            await this.syncThroughApi([]);
+          } catch (networkError) {
+            console.error("Network fallback init failed:", networkError);
+          }
+        }
         this.loading = false;
       }
     },
     async refresh() {
+      if (this.storageMode === "network") {
+        if (!this.syncStatus.online) {
+          return;
+        }
+        await this.syncThroughApi([]);
+        return;
+      }
       this.reminders = await getReminders();
     },
     async create(payload) {
+      if (this.storageMode === "network") {
+        const now = (/* @__PURE__ */ new Date()).toISOString();
+        const created2 = {
+          id: createId(),
+          title: payload.title,
+          description: payload.description,
+          date: payload.date,
+          time: payload.time,
+          completed: false,
+          createdAt: now,
+          updatedAt: now,
+          category: payload.category,
+          order: this.reminders.length + 1
+        };
+        await this.syncThroughApi([
+          {
+            id: createId(),
+            action: "create",
+            reminderId: created2.id,
+            payload: created2,
+            createdAt: now
+          }
+        ]);
+        await this.updatePendingCount();
+        return created2;
+      }
       const created = await addReminder(payload);
       this.reminders.push(created);
       await this.updatePendingCount();
@@ -199,6 +255,22 @@ const useRemindersStore = defineStore("reminders", {
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         };
       }
+      if (this.storageMode === "network") {
+        if (!backup) {
+          return null;
+        }
+        await this.syncThroughApi([
+          {
+            id: createId(),
+            action: "update",
+            reminderId,
+            payload: this.reminders[index],
+            createdAt: (/* @__PURE__ */ new Date()).toISOString()
+          }
+        ]);
+        await this.updatePendingCount();
+        return this.reminders[index];
+      }
       const saved = await updateReminder(reminderId, payload);
       if (!saved && backup) {
         this.reminders[index] = backup;
@@ -211,6 +283,18 @@ const useRemindersStore = defineStore("reminders", {
       const backup = [...this.reminders];
       this.reminders = this.reminders.filter((item) => item.id !== reminderId);
       try {
+        if (this.storageMode === "network") {
+          await this.syncThroughApi([
+            {
+              id: createId(),
+              action: "delete",
+              reminderId,
+              createdAt: (/* @__PURE__ */ new Date()).toISOString()
+            }
+          ]);
+          await this.updatePendingCount();
+          return;
+        }
         await deleteReminder(reminderId);
         await this.updatePendingCount();
         await this.syncIfOnline();
@@ -229,6 +313,20 @@ const useRemindersStore = defineStore("reminders", {
         return { ...item, order: index + 1 };
       }).filter((item) => Boolean(item));
       this.reminders = reordered;
+      if (this.storageMode === "network") {
+        const now = (/* @__PURE__ */ new Date()).toISOString();
+        await this.syncThroughApi(
+          reordered.map((item) => ({
+            id: createId(),
+            action: "update",
+            reminderId: item.id,
+            payload: item,
+            createdAt: now
+          }))
+        );
+        await this.updatePendingCount();
+        return;
+      }
       await Promise.all(
         reordered.map((item) => updateReminder(item.id, { order: item.order }))
       );
@@ -236,6 +334,19 @@ const useRemindersStore = defineStore("reminders", {
       await this.syncIfOnline();
     },
     async syncIfOnline() {
+      if (this.storageMode === "network") {
+        if (!this.syncStatus.online) {
+          return;
+        }
+        try {
+          this.syncStatus.syncing = true;
+          await this.syncThroughApi([]);
+        } finally {
+          this.syncStatus.syncing = false;
+          await this.updatePendingCount();
+        }
+        return;
+      }
       if (!this.syncStatus.online) {
         await triggerBackgroundSync();
         return;
@@ -260,10 +371,14 @@ const useRemindersStore = defineStore("reminders", {
       this.syncStatus.online = value;
     },
     async updatePendingCount() {
+      if (this.storageMode === "network") {
+        this.syncStatus.pendingCount = 0;
+        return;
+      }
       this.syncStatus.pendingCount = await db.queue.count();
     }
   }
 });
 
 export { getClientId as g, useRemindersStore as u };
-//# sourceMappingURL=reminders-DItiFgkI.mjs.map
+//# sourceMappingURL=reminders-d2dtA4vc.mjs.map

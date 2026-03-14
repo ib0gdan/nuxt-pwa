@@ -72,11 +72,11 @@ const reorderReminders = async (orderedIds: string[]) => {
         </select>
       </div>
 
-      <div v-if="error" class="rounded-2xl bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
+      <div v-if="error" class="rounded-2xl bg-amber-50 p-4 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
         {{ error }}
       </div>
 
-      <SkeletonList v-else-if="loading" />
+      <SkeletonList v-if="loading" />
       <ReminderList
         v-else
         :reminders="filteredReminders"

@@ -5,7 +5,7 @@ import type {
   ReminderInput,
   ReminderUpdate,
 } from "../types/reminder";
-import type { SyncStatus } from "../types/sync";
+import type { QueueOperation, SyncStatus } from "../types/sync";
 import {
   addReminder,
   deleteReminder,
@@ -15,6 +15,8 @@ import {
 } from "../services/db/reminders";
 import { db } from "../services/db/client";
 import { triggerBackgroundSync } from "../services/sync/backgroundSync";
+import { createId } from "../utils/id";
+import { getClientId } from "../utils/clientId";
 
 type SortDirection = "asc" | "desc";
 
@@ -30,6 +32,7 @@ export const useRemindersStore = defineStore("reminders", {
     reminders: [] as Reminder[],
     loading: true,
     error: null as string | null,
+    storageMode: "indexeddb" as "indexeddb" | "network",
     filter: "all" as ReminderFilter,
     sortDirection: "asc" as SortDirection,
     syncStatus: initialSyncStatus,
@@ -58,6 +61,20 @@ export const useRemindersStore = defineStore("reminders", {
     },
   },
   actions: {
+    async syncThroughApi(operations: QueueOperation[]) {
+      const response = await fetch("/api/reminders/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operations, userId: getClientId() }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to sync reminders via API");
+      }
+      const data = (await response.json()) as { reminders: Reminder[] };
+      this.reminders = data.reminders;
+      this.syncStatus.lastSyncedAt = new Date().toISOString();
+      return data.reminders;
+    },
     async init() {
       try {
         this.error = null;
@@ -69,14 +86,55 @@ export const useRemindersStore = defineStore("reminders", {
         this.syncStatus.lastSyncedAt = lastSynced?.value ?? null;
       } catch (err) {
         console.error("Critical DB Error:", err);
-        this.error = "Ошибка доступа к локальной базе данных. Попробуйте очистить место на устройстве или перезагрузить страницу.";
+        this.storageMode = "network";
+        this.error = "Локальная база недоступна. Переключено на сетевой режим без офлайн-кеша.";
+        if (this.syncStatus.online) {
+          try {
+            await this.syncThroughApi([]);
+          } catch (networkError) {
+            console.error("Network fallback init failed:", networkError);
+          }
+        }
         this.loading = false;
       }
     },
     async refresh() {
+      if (this.storageMode === "network") {
+        if (!this.syncStatus.online) {
+          return;
+        }
+        await this.syncThroughApi([]);
+        return;
+      }
       this.reminders = await getReminders();
     },
     async create(payload: ReminderInput) {
+      if (this.storageMode === "network") {
+        const now = new Date().toISOString();
+        const created: Reminder = {
+          id: createId(),
+          title: payload.title,
+          description: payload.description,
+          date: payload.date,
+          time: payload.time,
+          completed: false,
+          createdAt: now,
+          updatedAt: now,
+          category: payload.category,
+          order: this.reminders.length + 1,
+        };
+        await this.syncThroughApi([
+          {
+            id: createId(),
+            action: "create",
+            reminderId: created.id,
+            payload: created,
+            createdAt: now,
+          },
+        ]);
+        await this.updatePendingCount();
+        return created;
+      }
       const created = await addReminder(payload);
       this.reminders.push(created);
       await this.updatePendingCount();
@@ -94,6 +152,23 @@ export const useRemindersStore = defineStore("reminders", {
         };
       }
 
+      if (this.storageMode === "network") {
+        if (!backup) {
+          return null;
+        }
+        await this.syncThroughApi([
+          {
+            id: createId(),
+            action: "update",
+            reminderId,
+            payload: this.reminders[index],
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+        await this.updatePendingCount();
+        return this.reminders[index];
+      }
+
       const saved = await updateReminder(reminderId, payload);
       if (!saved && backup) {
         this.reminders[index] = backup;
@@ -106,6 +181,18 @@ export const useRemindersStore = defineStore("reminders", {
       const backup = [...this.reminders];
       this.reminders = this.reminders.filter((item) => item.id !== reminderId);
       try {
+        if (this.storageMode === "network") {
+          await this.syncThroughApi([
+            {
+              id: createId(),
+              action: "delete",
+              reminderId,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+          await this.updatePendingCount();
+          return;
+        }
         await deleteReminder(reminderId);
         await this.updatePendingCount();
         await this.syncIfOnline();
@@ -127,6 +214,20 @@ export const useRemindersStore = defineStore("reminders", {
         .filter((item): item is Reminder => Boolean(item));
 
       this.reminders = reordered;
+      if (this.storageMode === "network") {
+        const now = new Date().toISOString();
+        await this.syncThroughApi(
+          reordered.map((item) => ({
+            id: createId(),
+            action: "update" as const,
+            reminderId: item.id,
+            payload: item,
+            createdAt: now,
+          })),
+        );
+        await this.updatePendingCount();
+        return;
+      }
       await Promise.all(
         reordered.map((item) => updateReminder(item.id, { order: item.order })),
       );
@@ -134,6 +235,19 @@ export const useRemindersStore = defineStore("reminders", {
       await this.syncIfOnline();
     },
     async syncIfOnline() {
+      if (this.storageMode === "network") {
+        if (!this.syncStatus.online) {
+          return;
+        }
+        try {
+          this.syncStatus.syncing = true;
+          await this.syncThroughApi([]);
+        } finally {
+          this.syncStatus.syncing = false;
+          await this.updatePendingCount();
+        }
+        return;
+      }
       if (!this.syncStatus.online) {
         await triggerBackgroundSync();
         return;
@@ -159,6 +273,10 @@ export const useRemindersStore = defineStore("reminders", {
       this.syncStatus.online = value;
     },
     async updatePendingCount() {
+      if (this.storageMode === "network") {
+        this.syncStatus.pendingCount = 0;
+        return;
+      }
       this.syncStatus.pendingCount = await db.queue.count();
     },
   },

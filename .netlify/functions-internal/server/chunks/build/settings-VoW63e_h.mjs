@@ -2,7 +2,7 @@ import { _ as __nuxt_component_0 } from './SyncStatusBadge-C5_f4RRS.mjs';
 import { defineComponent, mergeProps, unref, ref, useSSRContext } from 'vue';
 import { ssrRenderAttrs, ssrInterpolate, ssrIncludeBooleanAttr, ssrRenderComponent } from 'vue/server-renderer';
 import { storeToRefs } from 'pinia';
-import { u as useRemindersStore, g as getClientId } from './reminders-DItiFgkI.mjs';
+import { u as useRemindersStore, g as getClientId } from './reminders-d2dtA4vc.mjs';
 import { e as useTheme, b as useToasts, c as useState, d as useRuntimeConfig } from './server.mjs';
 import 'dexie';
 import '../nitro/nitro.mjs';
@@ -230,4 +230,4 @@ _sfc_main.setup = (props, ctx) => {
 };
 
 export { _sfc_main as default };
-//# sourceMappingURL=settings-DrhIfw0S.mjs.map
+//# sourceMappingURL=settings-VoW63e_h.mjs.map
