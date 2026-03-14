@@ -6,7 +6,7 @@ import type { ReminderFilter, ReminderInput } from "../../types/reminder";
 import { useToasts } from "../../composables/useToast";
 
 const store = useRemindersStore();
-const { filteredReminders, loading, filter, sortDirection, syncStatus } =
+const { filteredReminders, loading, error, filter, sortDirection, syncStatus } =
   storeToRefs(store);
 const { addToast: push } = useToasts();
 
@@ -72,7 +72,11 @@ const reorderReminders = async (orderedIds: string[]) => {
         </select>
       </div>
 
-      <SkeletonList v-if="loading" />
+      <div v-if="error" class="rounded-2xl bg-red-50 p-4 text-red-600 dark:bg-red-900/20">
+        {{ error }}
+      </div>
+
+      <SkeletonList v-else-if="loading" />
       <ReminderList
         v-else
         :reminders="filteredReminders"
