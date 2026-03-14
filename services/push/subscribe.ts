@@ -25,6 +25,15 @@ export const requestNotificationsPermission =
     return Notification.requestPermission();
   };
 
+export interface PushClientDiagnostics {
+  secureContext: boolean;
+  notificationPermission: NotificationPermission | "unsupported";
+  hasServiceWorker: boolean;
+  hasPushManager: boolean;
+  hasSubscription: boolean;
+  serviceWorkerScope: string | null;
+}
+
 const waitForServiceWorkerReady = async (
   timeoutMs = 10000,
 ): Promise<ServiceWorkerRegistration> => {
@@ -36,7 +45,10 @@ const waitForServiceWorkerReady = async (
   return Promise.race([
     navigator.serviceWorker.ready,
     new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Service worker is not ready")), timeoutMs);
+      setTimeout(
+        () => reject(new Error("Service worker is not ready")),
+        timeoutMs,
+      );
     }),
   ]);
 };
@@ -45,6 +57,7 @@ export const ensurePushSubscription = async (
   vapidKey: string,
   userId: string,
   subscribeUrl = "/api/push/subscribe",
+  forceRefresh = false,
 ): Promise<PushSubscriptionPayload | null> => {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
     return null;
@@ -61,8 +74,14 @@ export const ensurePushSubscription = async (
 
   const registration = await waitForServiceWorkerReady();
   const existing = await registration.pushManager.getSubscription();
+  if (existing && forceRefresh) {
+    await existing.unsubscribe();
+  }
+  const activeSubscription = forceRefresh
+    ? null
+    : await registration.pushManager.getSubscription();
   const subscription =
-    existing ||
+    activeSubscription ||
     (await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: base64ToUint8Array(vapidKey) as BufferSource,
@@ -80,4 +99,64 @@ export const ensurePushSubscription = async (
     throw new Error("Failed to save push subscription");
   }
   return payload;
+};
+
+export const collectPushClientDiagnostics =
+  async (): Promise<PushClientDiagnostics> => {
+    if (!import.meta.client) {
+      return {
+        secureContext: false,
+        notificationPermission: "unsupported",
+        hasServiceWorker: false,
+        hasPushManager: false,
+        hasSubscription: false,
+        serviceWorkerScope: null,
+      };
+    }
+    const hasServiceWorker = "serviceWorker" in navigator;
+    const hasPushManager = "PushManager" in window;
+    const notificationPermission =
+      "Notification" in window ? Notification.permission : "unsupported";
+    if (!hasServiceWorker || !hasPushManager) {
+      return {
+        secureContext: window.isSecureContext,
+        notificationPermission,
+        hasServiceWorker,
+        hasPushManager,
+        hasSubscription: false,
+        serviceWorkerScope: null,
+      };
+    }
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = registration
+      ? await registration.pushManager.getSubscription()
+      : null;
+    return {
+      secureContext: window.isSecureContext,
+      notificationPermission,
+      hasServiceWorker,
+      hasPushManager,
+      hasSubscription: Boolean(subscription),
+      serviceWorkerScope: registration?.scope ?? null,
+    };
+  };
+
+export const showLocalTestNotification = async (): Promise<boolean> => {
+  if (!("serviceWorker" in navigator) || !("Notification" in window)) {
+    return false;
+  }
+  if (Notification.permission !== "granted") {
+    return false;
+  }
+  const registration = await navigator.serviceWorker.getRegistration();
+  if (!registration) {
+    return false;
+  }
+  await registration.showNotification("Локальный тест уведомления", {
+    body: "Это fallback-проверка показа системного уведомления на текущем устройстве.",
+    icon: "/icons/icon-192.svg",
+    badge: "/icons/icon-192.svg",
+    data: { url: "/" },
+  });
+  return true;
 };

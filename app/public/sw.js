@@ -3,7 +3,6 @@ import { registerRoute } from "workbox-routing";
 import { NetworkFirst, StaleWhileRevalidate } from "workbox-strategies";
 
 cleanupOutdatedCaches();
-// Предкеш критичных ресурсов, собранных в манифесте Workbox.
 precacheAndRoute(self.__WB_MANIFEST);
 
 registerRoute(
@@ -35,7 +34,6 @@ self.addEventListener("sync", (event) => {
     return;
   }
 
-  // Отправляем сигнал активным вкладкам, чтобы запустить sync на клиенте.
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       clients.forEach((client) => {
@@ -46,17 +44,35 @@ self.addEventListener("sync", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  const data = event.data?.json();
+  let data = null;
+  try {
+    data = event.data?.json?.() ?? null;
+  } catch {
+    data = null;
+  }
   const title = data?.title || "Vibe Sync";
   const body = data?.body || "У вас новое напоминание";
 
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      badge: "/icons/icon-192.svg",
-      icon: "/icons/icon-192.svg",
-      data: { url: "/" },
-    }),
+    Promise.all([
+      self.registration.showNotification(title, {
+        body,
+        badge: "/icons/icon-192.svg",
+        icon: "/icons/icon-192.svg",
+        data: { url: "/", reminderId: data?.reminderId ?? null },
+      }),
+      self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: "push-received",
+            payload: {
+              title,
+              reminderId: data?.reminderId ?? null,
+            },
+          });
+        });
+      }),
+    ]),
   );
 });
 

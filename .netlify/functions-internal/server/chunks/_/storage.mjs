@@ -36,23 +36,37 @@ const createStore = () => {
   }
 };
 const store = createStore();
+const fallbackStore = createMemoryStore();
 const readJson = async (key, fallback) => {
   try {
     const raw = await store.get(key, { type: "text" });
     if (!raw) {
-      return fallback;
+      const local = await fallbackStore.get(key, { type: "text" });
+      if (!local) {
+        return fallback;
+      }
+      return JSON.parse(local);
     }
     return JSON.parse(raw);
   } catch (error) {
     console.error(`Failed to read from blobs: ${key}`, error);
-    return fallback;
+    const local = await fallbackStore.get(key, { type: "text" });
+    if (!local) {
+      return fallback;
+    }
+    return JSON.parse(local);
   }
 };
 const writeJson = async (key, value) => {
+  const serialized = JSON.stringify(value);
   try {
-    await store.set(key, JSON.stringify(value));
+    await store.set(key, serialized);
   } catch (error) {
     console.error(`Failed to write to blobs: ${key}`, error);
+    await fallbackStore.set(key, serialized);
+    {
+      throw error;
+    }
   }
 };
 const getUserReminders = async (userId) => {
@@ -84,7 +98,13 @@ const getDeliveredIds = async (userId) => {
   return readJson(`delivered:${userId}`, []);
 };
 const deleteSubscription = async (userId) => {
-  await store.set(`subscription:${userId}`, "");
+  const results = await Promise.allSettled([
+    store.set(`subscription:${userId}`, ""),
+    fallbackStore.set(`subscription:${userId}`, "")
+  ]);
+  if (results[0].status === "rejected") {
+    throw results[0].reason;
+  }
 };
 const saveDeliveredIds = async (userId, ids) => {
   await writeJson(`delivered:${userId}`, ids);

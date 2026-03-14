@@ -10,6 +10,26 @@ import 'node:path';
 import 'node:crypto';
 import '@netlify/blobs';
 
+const isDueReminder = (item, now = Date.now()) => {
+  const dueAt = (/* @__PURE__ */ new Date(`${item.date}T${item.time}:00`)).getTime();
+  return Number.isFinite(dueAt) && dueAt <= now;
+};
+const collectDueUndelivered = (reminders, deliveredIds, now = Date.now()) => reminders.filter((item) => !item.completed && !deliveredIds.has(item.id) && isDueReminder(item, now));
+const createPushPayload = (reminder) => JSON.stringify({
+  title: "\u041D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u043D\u0438\u0435",
+  body: `${reminder.title} \u2014 ${reminder.description || "\u041F\u043E\u0440\u0430 \u0432\u044B\u043F\u043E\u043B\u043D\u0438\u0442\u044C \u0437\u0430\u0434\u0430\u0447\u0443"}`,
+  reminderId: reminder.id
+});
+const shouldDropSubscription = (statusCode) => statusCode === 404 || statusCode === 410;
+const toPushDeliveryError = (error) => {
+  const value = error;
+  return {
+    statusCode: value == null ? void 0 : value.statusCode,
+    body: value == null ? void 0 : value.body,
+    message: (value == null ? void 0 : value.message) || String(error)
+  };
+};
+
 const trigger_get = defineEventHandler(async () => {
   const config = useRuntimeConfig();
   const publicKey = config.public.webPushPublicKey;
@@ -24,6 +44,7 @@ const trigger_get = defineEventHandler(async () => {
   webpush.setVapidDetails(subject, publicKey, privateKey);
   const entries = await getAllReminderEntries();
   const results = [];
+  console.info("[push-debug] start", { users: entries.length });
   for (const entry of entries) {
     const { userId, reminders } = entry;
     const subscription = await getSubscription(userId);
@@ -32,34 +53,31 @@ const trigger_get = defineEventHandler(async () => {
     }
     const delivered = new Set(await getDeliveredIds(userId));
     const now = Date.now();
-    const due = reminders.filter((item) => {
-      if (item.completed) return false;
-      const dueAt = (/* @__PURE__ */ new Date(`${item.date}T${item.time}:00`)).getTime();
-      return dueAt <= now;
-    });
+    const due = collectDueUndelivered(reminders, delivered, now);
     let sentCount = 0;
     for (const reminder of due) {
-      if (delivered.has(reminder.id)) {
-        continue;
-      }
       try {
         await webpush.sendNotification(
           subscription,
-          JSON.stringify({
-            title: "\u041D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u043D\u0438\u0435",
-            body: `${reminder.title} \u2014 ${reminder.description || "\u041F\u043E\u0440\u0430 \u0432\u044B\u043F\u043E\u043B\u043D\u0438\u0442\u044C \u0437\u0430\u0434\u0430\u0447\u0443"}`,
-            reminderId: reminder.id
-          })
+          createPushPayload(reminder)
         );
         delivered.add(reminder.id);
         sentCount++;
+        console.info("[push-debug] sent", { userId, reminderId: reminder.id });
         results.push({ userId, reminderId: reminder.id, status: "sent" });
       } catch (err) {
-        const error = err;
-        console.error(`Failed to send push to user ${userId}:`, error);
-        if (error.statusCode === 410 || error.statusCode === 404) {
-          console.log(`Subscription expired for user ${userId}, removing...`);
+        const error = toPushDeliveryError(err);
+        console.error("[push-debug] failed", {
+          userId,
+          reminderId: reminder.id,
+          ...error
+        });
+        if (shouldDropSubscription(error.statusCode)) {
           await deleteSubscription(userId);
+          console.info("[push-debug] subscription removed", {
+            userId,
+            statusCode: error.statusCode
+          });
         }
         results.push({
           userId,
@@ -67,7 +85,7 @@ const trigger_get = defineEventHandler(async () => {
           status: "failed",
           statusCode: error.statusCode,
           body: error.body,
-          error: String(error)
+          error: error.message
         });
       }
     }

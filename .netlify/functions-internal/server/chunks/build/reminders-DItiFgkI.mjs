@@ -136,6 +136,7 @@ const useRemindersStore = defineStore("reminders", {
   state: () => ({
     reminders: [],
     loading: true,
+    error: null,
     filter: "all",
     sortDirection: "asc",
     syncStatus: initialSyncStatus
@@ -164,12 +165,19 @@ const useRemindersStore = defineStore("reminders", {
   },
   actions: {
     async init() {
-      this.syncStatus.online = true;
-      await this.refresh();
-      this.loading = false;
-      await this.updatePendingCount();
-      const lastSynced = await db.meta.get("lastSyncedAt");
-      this.syncStatus.lastSyncedAt = lastSynced?.value ?? null;
+      try {
+        this.error = null;
+        this.syncStatus.online = false ? (void 0).onLine : true;
+        await this.refresh();
+        this.loading = false;
+        await this.updatePendingCount();
+        const lastSynced = await db.meta.get("lastSyncedAt");
+        this.syncStatus.lastSyncedAt = lastSynced?.value ?? null;
+      } catch (err) {
+        console.error("Critical DB Error:", err);
+        this.error = "Ошибка доступа к локальной базе данных. Попробуйте очистить место на устройстве или перезагрузить страницу.";
+        this.loading = false;
+      }
     },
     async refresh() {
       this.reminders = await getReminders();
@@ -258,4 +266,4 @@ const useRemindersStore = defineStore("reminders", {
 });
 
 export { getClientId as g, useRemindersStore as u };
-//# sourceMappingURL=reminders-fL9tzzYx.mjs.map
+//# sourceMappingURL=reminders-DItiFgkI.mjs.map

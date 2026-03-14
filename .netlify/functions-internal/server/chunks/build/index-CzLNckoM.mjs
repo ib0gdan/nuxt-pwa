@@ -2,9 +2,9 @@ import { defineComponent, mergeProps, unref, ref, useSSRContext } from 'vue';
 import { ssrRenderAttrs, ssrRenderList, ssrRenderClass, ssrInterpolate, ssrRenderAttr, ssrRenderComponent } from 'vue/server-renderer';
 import { b as useToasts, _ as _export_sfc } from './server.mjs';
 import { _ as __nuxt_component_0$2 } from './SyncStatusBadge-C5_f4RRS.mjs';
-import { _ as __nuxt_component_0$3 } from './ReminderForm-CFFNU4Tv.mjs';
+import { _ as __nuxt_component_0$3 } from './ReminderForm-B3-LKQOt.mjs';
 import { storeToRefs } from 'pinia';
-import { u as useRemindersStore } from './reminders-fL9tzzYx.mjs';
+import { u as useRemindersStore } from './reminders-DItiFgkI.mjs';
 import '../nitro/nitro.mjs';
 import 'node:http';
 import 'node:https';
@@ -104,7 +104,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
   __ssrInlineRender: true,
   setup(__props) {
     const store = useRemindersStore();
-    const { filteredReminders, loading, filter, sortDirection, syncStatus } = storeToRefs(store);
+    const { filteredReminders, loading, error, filter, sortDirection, syncStatus } = storeToRefs(store);
     const { addToast: push } = useToasts();
     const availableFilters = ["all", "active", "completed"];
     const createNew = async (payload) => {
@@ -136,7 +136,9 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
         ])}">${ssrInterpolate(item)}</button>`);
       });
       _push(`<!--]--></div><select class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-950"${ssrRenderAttr("value", unref(sortDirection))}><option value="asc">Сначала ранние</option><option value="desc">Сначала поздние</option></select></div>`);
-      if (unref(loading)) {
+      if (unref(error)) {
+        _push(`<div class="rounded-2xl bg-red-50 p-4 text-red-600 dark:bg-red-900/20">${ssrInterpolate(unref(error))}</div>`);
+      } else if (unref(loading)) {
         _push(ssrRenderComponent(_component_SkeletonList, null, null, _parent));
       } else {
         _push(ssrRenderComponent(_component_ReminderList, {
@@ -166,4 +168,4 @@ _sfc_main.setup = (props, ctx) => {
 };
 
 export { _sfc_main as default };
-//# sourceMappingURL=index-C_qoQYgE.mjs.map
+//# sourceMappingURL=index-CzLNckoM.mjs.map

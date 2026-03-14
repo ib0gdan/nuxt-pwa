@@ -52,27 +52,39 @@ const createStore = (): BlobStore => {
 };
 
 const store = createStore();
+const fallbackStore = createMemoryStore();
 
 const readJson = async <T>(key: string, fallback: T): Promise<T> => {
   try {
     const raw = await store.get(key, { type: "text" });
     if (!raw) {
-      return fallback;
+      const local = await fallbackStore.get(key, { type: "text" });
+      if (!local) {
+        return fallback;
+      }
+      return JSON.parse(local) as T;
     }
     return JSON.parse(raw) as T;
   } catch (error) {
     console.error(`Failed to read from blobs: ${key}`, error);
-    return fallback;
+    const local = await fallbackStore.get(key, { type: "text" });
+    if (!local) {
+      return fallback;
+    }
+    return JSON.parse(local) as T;
   }
 };
 
 const writeJson = async <T>(key: string, value: T): Promise<void> => {
+  const serialized = JSON.stringify(value);
   try {
-    await store.set(key, JSON.stringify(value));
+    await store.set(key, serialized);
   } catch (error) {
     console.error(`Failed to write to blobs: ${key}`, error);
-    // В dev-режиме можно игнорировать ошибки записи в удаленное хранилище,
-    // если сеть недоступна, чтобы не блокировать UI
+    await fallbackStore.set(key, serialized);
+    if (process.env.NODE_ENV === "production") {
+      throw error;
+    }
   }
 };
 
@@ -121,7 +133,16 @@ export const getDeliveredIds = async (userId: string): Promise<string[]> => {
 };
 
 export const deleteSubscription = async (userId: string): Promise<void> => {
-  await store.set(`subscription:${userId}`, "");
+  const results = await Promise.allSettled([
+    store.set(`subscription:${userId}`, ""),
+    fallbackStore.set(`subscription:${userId}`, ""),
+  ]);
+  if (
+    process.env.NODE_ENV === "production" &&
+    results[0].status === "rejected"
+  ) {
+    throw results[0].reason;
+  }
 };
 
 export const saveDeliveredIds = async (

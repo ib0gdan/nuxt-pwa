@@ -7,7 +7,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "vitest run --config ./vitest.config.ts"
   },
   "dependencies": {
     "@netlify/blobs": "^10.7.0",
@@ -24,6 +25,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
-    "@types/web-push": "^3.6.4"
+    "@types/web-push": "^3.6.4",
+    "vitest": "^3.2.4"
   }
 }

@@ -4067,7 +4067,7 @@ function _expandFromEnv(value) {
 const _inlineRuntimeConfig = {
   "app": {
     "baseURL": "/",
-    "buildId": "28caa495-7f0e-43b0-ad42-247bdb255bea",
+    "buildId": "383688c0-adb4-4c9a-b41b-7c63d579777f",
     "buildAssetsDir": "/_nuxt/",
     "cdnURL": ""
   },
@@ -4519,12 +4519,14 @@ const plugins = [
 
 const _SxA8c9 = defineEventHandler(() => {});
 
+const _lazy_xk1y6d = () => import('../routes/api/debug/push-health.get.mjs');
 const _lazy_evl6Y_ = () => import('../routes/api/debug/trigger.get.mjs');
 const _lazy_XgTuza = () => import('../routes/api/push/subscribe.post.mjs');
 const _lazy_MUW7dE = () => import('../routes/api/reminders/sync.post.mjs');
 const _lazy_APohPe = () => import('../routes/renderer.mjs').then(function (n) { return n.r; });
 
 const handlers = [
+  { route: '/api/debug/push-health', handler: _lazy_xk1y6d, lazy: true, middleware: false, method: "get" },
   { route: '/api/debug/trigger', handler: _lazy_evl6Y_, lazy: true, middleware: false, method: "get" },
   { route: '/api/push/subscribe', handler: _lazy_XgTuza, lazy: true, middleware: false, method: "post" },
   { route: '/api/reminders/sync', handler: _lazy_MUW7dE, lazy: true, middleware: false, method: "post" },

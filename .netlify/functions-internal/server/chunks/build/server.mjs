@@ -419,22 +419,22 @@ const _routes = [
   {
     name: "index",
     path: "/",
-    component: () => import('./index-C_qoQYgE.mjs')
+    component: () => import('./index-CzLNckoM.mjs')
   },
   {
     name: "create",
     path: "/create",
-    component: () => import('./create-Nfu8GPQu.mjs')
+    component: () => import('./create-SEHfDXL2.mjs')
   },
   {
     name: "settings",
     path: "/settings",
-    component: () => import('./settings-CpNtqh1G.mjs')
+    component: () => import('./settings-DrhIfw0S.mjs')
   },
   {
     name: "analytics",
     path: "/analytics",
-    component: () => import('./analytics-BNqxh94i.mjs')
+    component: () => import('./analytics-Bd1xDfQk.mjs')
   }
 ];
 const ROUTE_KEY_PARENTHESES_RE = /(:\w+)\([^)]+\)/g;

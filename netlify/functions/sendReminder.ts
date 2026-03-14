@@ -1,15 +1,13 @@
 import type { Config, Handler } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
 import webpush from "web-push";
-
-interface Reminder {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  completed: boolean;
-}
+import type { Reminder } from "../../types/reminder";
+import {
+  collectDueUndelivered,
+  createPushPayload,
+  shouldDropSubscription,
+  toPushDeliveryError,
+} from "../../server/utils/push-delivery";
 
 interface PushSubscriptionPayload {
   endpoint: string;
@@ -37,9 +35,8 @@ const writeJson = async <T>(key: string, value: T): Promise<void> => {
   await store.set(key, JSON.stringify(value));
 };
 
-const isDue = (item: Reminder): boolean => {
-  const dueAt = new Date(`${item.date}T${item.time}:00`).getTime();
-  return dueAt <= Date.now();
+const deleteSubscription = async (userId: string): Promise<void> => {
+  await store.set(`subscription:${userId}`, "");
 };
 
 export const handler: Handler = async () => {
@@ -57,6 +54,9 @@ export const handler: Handler = async () => {
   webpush.setVapidDetails(subject, publicKey, privateKey);
 
   const list = await store.list({ prefix: "reminders:" });
+  const failures: Array<{ userId: string; reminderId: string; statusCode?: number }> = [];
+  let sentCount = 0;
+
   for (const blob of list.blobs) {
     const userId = blob.key.replace("reminders:", "");
     const reminders = await readJson<Reminder[]>(blob.key, []);
@@ -72,21 +72,26 @@ export const handler: Handler = async () => {
       await readJson<string[]>(`delivered:${userId}`, []),
     );
 
-    // Дедупликация: не отправляем одно и то же напоминание повторно.
-    const due = reminders.filter((item) => !item.completed && isDue(item));
+    const due = collectDueUndelivered(reminders, delivered);
     for (const reminder of due) {
-      if (delivered.has(reminder.id)) {
-        continue;
+      try {
+        await webpush.sendNotification(
+          subscription as unknown as webpush.PushSubscription,
+          createPushPayload(reminder),
+        );
+        delivered.add(reminder.id);
+        sentCount += 1;
+        console.info("[push-cron] sent", { userId, reminderId: reminder.id });
+      } catch (error) {
+        const info = toPushDeliveryError(error);
+        console.error("[push-cron] failed", { userId, reminderId: reminder.id, ...info });
+        failures.push({ userId, reminderId: reminder.id, statusCode: info.statusCode });
+        if (shouldDropSubscription(info.statusCode)) {
+          await deleteSubscription(userId);
+          console.info("[push-cron] subscription removed", { userId, statusCode: info.statusCode });
+          break;
+        }
       }
-      await webpush.sendNotification(
-        subscription as unknown as webpush.PushSubscription,
-        JSON.stringify({
-          title: "Напоминание",
-          body: `${reminder.title} — ${reminder.description || "Пора выполнить задачу"}`,
-          reminderId: reminder.id,
-        }),
-      );
-      delivered.add(reminder.id);
     }
 
     await writeJson(`delivered:${userId}`, [...delivered]);
@@ -94,7 +99,7 @@ export const handler: Handler = async () => {
 
   return {
     statusCode: 200,
-    body: JSON.stringify({ ok: true }),
+    body: JSON.stringify({ ok: true, sentCount, failures }),
   };
 };
 

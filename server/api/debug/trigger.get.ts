@@ -6,6 +6,12 @@ import {
   getSubscription,
   saveDeliveredIds,
 } from "../../utils/storage";
+import {
+  collectDueUndelivered,
+  createPushPayload,
+  shouldDropSubscription,
+  toPushDeliveryError,
+} from "../../utils/push-delivery";
 
 export default defineEventHandler(async () => {
   const config = useRuntimeConfig();
@@ -24,6 +30,7 @@ export default defineEventHandler(async () => {
 
   const entries = await getAllReminderEntries();
   const results = [];
+  console.info("[push-debug] start", { users: entries.length });
 
   for (const entry of entries) {
     const { userId, reminders } = entry;
@@ -36,38 +43,34 @@ export default defineEventHandler(async () => {
     const delivered = new Set(await getDeliveredIds(userId));
     const now = Date.now();
 
-    const due = reminders.filter((item) => {
-      if (item.completed) return false;
-      const dueAt = new Date(`${item.date}T${item.time}:00`).getTime();
-      return dueAt <= now;
-    });
+    const due = collectDueUndelivered(reminders, delivered, now);
 
     let sentCount = 0;
 
     for (const reminder of due) {
-      if (delivered.has(reminder.id)) {
-        continue;
-      }
-
       try {
         await webpush.sendNotification(
           subscription as unknown as webpush.PushSubscription,
-          JSON.stringify({
-            title: "Напоминание",
-            body: `${reminder.title} — ${reminder.description || "Пора выполнить задачу"}`,
-            reminderId: reminder.id,
-          }),
+          createPushPayload(reminder),
         );
         delivered.add(reminder.id);
         sentCount++;
+        console.info("[push-debug] sent", { userId, reminderId: reminder.id });
         results.push({ userId, reminderId: reminder.id, status: "sent" });
       } catch (err: unknown) {
-        const error = err as { statusCode?: number; body?: string };
-        console.error(`Failed to send push to user ${userId}:`, error);
+        const error = toPushDeliveryError(err);
+        console.error("[push-debug] failed", {
+          userId,
+          reminderId: reminder.id,
+          ...error,
+        });
 
-        if (error.statusCode === 410 || error.statusCode === 404) {
-          console.log(`Subscription expired for user ${userId}, removing...`);
+        if (shouldDropSubscription(error.statusCode)) {
           await deleteSubscription(userId);
+          console.info("[push-debug] subscription removed", {
+            userId,
+            statusCode: error.statusCode,
+          });
         }
 
         results.push({
@@ -76,7 +79,7 @@ export default defineEventHandler(async () => {
           status: "failed",
           statusCode: error.statusCode,
           body: error.body,
-          error: String(error),
+          error: error.message,
         });
       }
     }
