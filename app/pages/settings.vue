@@ -21,6 +21,21 @@ const activatePush = async () => {
   const ok = await enablePush();
   push(ok ? "Push включены" : "Push не подключены", ok ? "success" : "error");
 };
+
+const testPush = async () => {
+  try {
+    const res = await fetch("/api/debug/trigger");
+    const data = await res.json();
+    if (data.ok) {
+      push("Тестовое уведомление отправлено", "success");
+    } else {
+      push("Ошибка отправки теста", "error");
+    }
+  } catch (e) {
+    push("Ошибка запроса теста", "error");
+    console.error(e);
+  }
+};
 </script>
 
 <template>
@@ -37,13 +52,28 @@ const activatePush = async () => {
               Текущий статус: {{ enabled ? "Включены" : "Выключены" }}
             </p>
           </div>
-          <button
-            class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-60"
-            :disabled="loading"
-            @click="activatePush"
-          >
-            {{ loading ? "Подключаем..." : "Включить push" }}
-          </button>
+          <div class="flex gap-2">
+            <button
+              v-if="enabled"
+              class="rounded-lg bg-slate-200 px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600"
+              @click="testPush"
+            >
+              Test Push
+            </button>
+            <button
+              class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-60"
+              :disabled="loading"
+              @click="activatePush"
+            >
+              {{
+                loading
+                  ? "Подключаем..."
+                  : enabled
+                    ? "Обновить ключи"
+                    : "Включить push"
+              }}
+            </button>
+          </div>
         </div>
 
         <div

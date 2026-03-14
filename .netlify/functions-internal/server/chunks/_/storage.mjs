@@ -23,7 +23,12 @@ const createStore = () => {
   const token = process.env.NETLIFY_API_TOKEN || process.env.NETLIFY_AUTH_TOKEN || process.env.NETLIFY_TOKEN;
   try {
     if (siteID && token) {
-      return getStore({ name: "vibe-sync", siteID, token });
+      return getStore({
+        name: "vibe-sync",
+        siteID,
+        token,
+        fetch: (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(5e3) })
+      });
     }
     return getStore("vibe-sync");
   } catch {
@@ -32,14 +37,23 @@ const createStore = () => {
 };
 const store = createStore();
 const readJson = async (key, fallback) => {
-  const raw = await store.get(key, { type: "text" });
-  if (!raw) {
+  try {
+    const raw = await store.get(key, { type: "text" });
+    if (!raw) {
+      return fallback;
+    }
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error(`Failed to read from blobs: ${key}`, error);
     return fallback;
   }
-  return JSON.parse(raw);
 };
 const writeJson = async (key, value) => {
-  await store.set(key, JSON.stringify(value));
+  try {
+    await store.set(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Failed to write to blobs: ${key}`, error);
+  }
 };
 const getUserReminders = async (userId) => {
   return readJson(`reminders:${userId}`, []);
@@ -61,14 +75,20 @@ const saveSubscription = async (userId, subscription) => {
   await writeJson(`subscription:${userId}`, subscription);
 };
 const getSubscription = async (userId) => {
-  return readJson(`subscription:${userId}`, null);
+  return readJson(
+    `subscription:${userId}`,
+    null
+  );
 };
 const getDeliveredIds = async (userId) => {
   return readJson(`delivered:${userId}`, []);
+};
+const deleteSubscription = async (userId) => {
+  await store.set(`subscription:${userId}`, "");
 };
 const saveDeliveredIds = async (userId, ids) => {
   await writeJson(`delivered:${userId}`, ids);
 };
 
-export { getSubscription as a, getDeliveredIds as b, saveSubscription as c, getUserReminders as d, setUserReminders as e, getAllReminderEntries as g, saveDeliveredIds as s };
+export { getSubscription as a, getDeliveredIds as b, saveSubscription as c, deleteSubscription as d, getUserReminders as e, setUserReminders as f, getAllReminderEntries as g, saveDeliveredIds as s };
 //# sourceMappingURL=storage.mjs.map

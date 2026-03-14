@@ -1,6 +1,6 @@
 import { d as defineEventHandler, c as createError, u as useRuntimeConfig } from '../../../nitro/nitro.mjs';
 import webpush from 'web-push';
-import { g as getAllReminderEntries, a as getSubscription, b as getDeliveredIds, s as saveDeliveredIds } from '../../../_/storage.mjs';
+import { g as getAllReminderEntries, a as getSubscription, b as getDeliveredIds, d as deleteSubscription, s as saveDeliveredIds } from '../../../_/storage.mjs';
 import 'node:http';
 import 'node:https';
 import 'node:events';
@@ -59,6 +59,7 @@ const trigger_get = defineEventHandler(async () => {
         console.error(`Failed to send push to user ${userId}:`, error);
         if (error.statusCode === 410 || error.statusCode === 404) {
           console.log(`Subscription expired for user ${userId}, removing...`);
+          await deleteSubscription(userId);
         }
         results.push({
           userId,

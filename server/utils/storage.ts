@@ -30,11 +30,20 @@ const createMemoryStore = (): BlobStore => {
 
 const createStore = (): BlobStore => {
   const siteID = process.env.NETLIFY_SITE_ID;
-  const token = process.env.NETLIFY_API_TOKEN || process.env.NETLIFY_AUTH_TOKEN || process.env.NETLIFY_TOKEN;
+  const token =
+    process.env.NETLIFY_API_TOKEN ||
+    process.env.NETLIFY_AUTH_TOKEN ||
+    process.env.NETLIFY_TOKEN;
 
   try {
     if (siteID && token) {
-      return getStore({ name: "vibe-sync", siteID, token }) as unknown as BlobStore;
+      return getStore({
+        name: "vibe-sync",
+        siteID,
+        token,
+        fetch: (url, init) =>
+          fetch(url, { ...init, signal: AbortSignal.timeout(5000) }),
+      }) as unknown as BlobStore;
     }
     return getStore("vibe-sync") as unknown as BlobStore;
   } catch {
@@ -45,26 +54,42 @@ const createStore = (): BlobStore => {
 const store = createStore();
 
 const readJson = async <T>(key: string, fallback: T): Promise<T> => {
-  const raw = await store.get(key, { type: "text" });
-  if (!raw) {
+  try {
+    const raw = await store.get(key, { type: "text" });
+    if (!raw) {
+      return fallback;
+    }
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    console.error(`Failed to read from blobs: ${key}`, error);
     return fallback;
   }
-  return JSON.parse(raw) as T;
 };
 
 const writeJson = async <T>(key: string, value: T): Promise<void> => {
-  await store.set(key, JSON.stringify(value));
+  try {
+    await store.set(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Failed to write to blobs: ${key}`, error);
+    // В dev-режиме можно игнорировать ошибки записи в удаленное хранилище,
+    // если сеть недоступна, чтобы не блокировать UI
+  }
 };
 
 export const getUserReminders = async (userId: string): Promise<Reminder[]> => {
   return readJson<Reminder[]>(`reminders:${userId}`, []);
 };
 
-export const setUserReminders = async (userId: string, reminders: Reminder[]): Promise<void> => {
+export const setUserReminders = async (
+  userId: string,
+  reminders: Reminder[],
+): Promise<void> => {
   await writeJson(`reminders:${userId}`, reminders);
 };
 
-export const getAllReminderEntries = async (): Promise<Array<{ userId: string; reminders: Reminder[] }>> => {
+export const getAllReminderEntries = async (): Promise<
+  Array<{ userId: string; reminders: Reminder[] }>
+> => {
   const listed = await store.list({ prefix: "reminders:" });
   const entries = await Promise.all(
     listed.blobs.map(async (blob) => ({
@@ -82,14 +107,26 @@ export const saveSubscription = async (
   await writeJson(`subscription:${userId}`, subscription);
 };
 
-export const getSubscription = async (userId: string): Promise<PushSubscriptionPayload | null> => {
-  return readJson<PushSubscriptionPayload | null>(`subscription:${userId}`, null);
+export const getSubscription = async (
+  userId: string,
+): Promise<PushSubscriptionPayload | null> => {
+  return readJson<PushSubscriptionPayload | null>(
+    `subscription:${userId}`,
+    null,
+  );
 };
 
 export const getDeliveredIds = async (userId: string): Promise<string[]> => {
   return readJson<string[]>(`delivered:${userId}`, []);
 };
 
-export const saveDeliveredIds = async (userId: string, ids: string[]): Promise<void> => {
+export const deleteSubscription = async (userId: string): Promise<void> => {
+  await store.set(`subscription:${userId}`, "");
+};
+
+export const saveDeliveredIds = async (
+  userId: string,
+  ids: string[],
+): Promise<void> => {
   await writeJson(`delivered:${userId}`, ids);
 };

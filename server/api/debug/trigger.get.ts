@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import {
+  deleteSubscription,
   getAllReminderEntries,
   getDeliveredIds,
   getSubscription,
@@ -63,10 +64,10 @@ export default defineEventHandler(async () => {
       } catch (err: unknown) {
         const error = err as { statusCode?: number; body?: string };
         console.error(`Failed to send push to user ${userId}:`, error);
-        
+
         if (error.statusCode === 410 || error.statusCode === 404) {
-           console.log(`Subscription expired for user ${userId}, removing...`);
-           // TODO: Можно реализовать удаление подписки
+          console.log(`Subscription expired for user ${userId}, removing...`);
+          await deleteSubscription(userId);
         }
 
         results.push({
