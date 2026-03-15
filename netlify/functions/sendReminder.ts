@@ -56,6 +56,10 @@ export const handler: Handler = async () => {
   const list = await store.list({ prefix: "reminders:" });
   const failures: Array<{ userId: string; reminderId: string; statusCode?: number }> = [];
   let sentCount = 0;
+  let usersWithSubscription = 0;
+  let dueCount = 0;
+
+  console.info("[push-cron] start", { usersTotal: list.blobs.length });
 
   for (const blob of list.blobs) {
     const userId = blob.key.replace("reminders:", "");
@@ -67,12 +71,14 @@ export const handler: Handler = async () => {
     if (!subscription) {
       continue;
     }
+    usersWithSubscription += 1;
 
     const delivered = new Set(
       await readJson<string[]>(`delivered:${userId}`, []),
     );
 
     const due = collectDueUndelivered(reminders, delivered);
+    dueCount += due.length;
     for (const reminder of due) {
       try {
         await webpush.sendNotification(
@@ -96,6 +102,14 @@ export const handler: Handler = async () => {
 
     await writeJson(`delivered:${userId}`, [...delivered]);
   }
+
+  console.info("[push-cron] summary", {
+    usersTotal: list.blobs.length,
+    usersWithSubscription,
+    dueCount,
+    sentCount,
+    failures: failures.length,
+  });
 
   return {
     statusCode: 200,
