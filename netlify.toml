@@ -9,6 +9,3 @@
 [build.environment]
   NODE_VERSION = "20"
   NITRO_PRESET = "netlify"
-
-[functions."sendReminder"]
-  schedule = "*/1 * * * *"
