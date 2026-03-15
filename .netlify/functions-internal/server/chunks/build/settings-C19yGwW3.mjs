@@ -106,25 +106,6 @@ const collectPushClientDiagnostics = async () => {
     };
   }
 };
-const showLocalTestNotification = async () => {
-  if (!("serviceWorker" in void 0) || !("Notification" in void 0)) {
-    return false;
-  }
-  if (Notification.permission !== "granted") {
-    return false;
-  }
-  const registration = await (void 0).serviceWorker.getRegistration();
-  if (!registration) {
-    return false;
-  }
-  await registration.showNotification("Локальный тест уведомления", {
-    body: "Это fallback-проверка показа системного уведомления на текущем устройстве.",
-    icon: "/icons/icon-192.svg",
-    badge: "/icons/icon-192.svg",
-    data: { url: "/" }
-  });
-  return true;
-};
 const usePush = () => {
   const config = useRuntimeConfig();
   const enabled = useState("push-enabled", () => false);
@@ -180,7 +161,6 @@ const usePush = () => {
     loading,
     diagnostics,
     enablePush,
-    showLocalTestNotification,
     syncPushStatus,
     refreshDiagnostics
   };
@@ -200,18 +180,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     useToasts();
     return (_ctx, _push, _parent, _attrs) => {
       const _component_SyncStatusBadge = __nuxt_component_0;
-      _push(`<section${ssrRenderAttrs(mergeProps({ class: "mx-auto grid max-w-3xl gap-4" }, _attrs))}><div class="rounded-2xl bg-white p-5 shadow dark:bg-slate-900"><h1 class="mb-4 text-xl font-semibold">Settings</h1><div class="grid gap-3"><div class="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-3 dark:bg-slate-800"><div><p class="text-sm font-medium">Push Notifications</p><p class="text-xs text-slate-500"> Текущий статус: ${ssrInterpolate(unref(enabled) ? "Включены" : "Выключены")}</p><p class="text-xs text-slate-500"> Secure Context: ${ssrInterpolate(unref(diagnostics).secureContext ? "Да" : "Нет")} · Permission: ${ssrInterpolate(unref(diagnostics).notificationPermission)}</p><p class="text-xs text-slate-500"> SW: ${ssrInterpolate(unref(diagnostics).hasServiceWorker ? "Да" : "Нет")} · Push API: ${ssrInterpolate(unref(diagnostics).hasPushManager ? "Да" : "Нет")} · Subscription: ${ssrInterpolate(unref(diagnostics).hasSubscription ? "Да" : "Нет")}</p></div><div class="flex gap-2">`);
-      if (unref(enabled)) {
-        _push(`<button class="rounded-lg bg-slate-200 px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600"> Test Push </button>`);
-      } else {
-        _push(`<!---->`);
-      }
-      if (unref(enabled)) {
-        _push(`<button class="rounded-lg bg-slate-200 px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600"> Local Notify </button>`);
-      } else {
-        _push(`<!---->`);
-      }
-      _push(`<button class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-60"${ssrIncludeBooleanAttr(unref(loading)) ? " disabled" : ""}>${ssrInterpolate(unref(loading) ? "Подключаем..." : unref(enabled) ? "Обновить ключи" : "Включить push")}</button></div></div><div class="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-3 dark:bg-slate-800"><div><p class="text-sm font-medium">Dark Mode</p><p class="text-xs text-slate-500">Текущая тема: ${ssrInterpolate(unref(mode))}</p></div><button class="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-white hover:bg-slate-600"> Toggle </button></div></div></div>`);
+      _push(`<section${ssrRenderAttrs(mergeProps({ class: "mx-auto grid max-w-3xl gap-4" }, _attrs))}><div class="rounded-2xl bg-white p-5 shadow dark:bg-slate-900"><h1 class="mb-4 text-xl font-semibold">Settings</h1><div class="grid gap-3"><div class="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-3 dark:bg-slate-800"><div><p class="text-sm font-medium">Push Notifications</p><p class="text-xs text-slate-500"> Текущий статус: ${ssrInterpolate(unref(enabled) ? "Включены" : "Выключены")}</p><p class="text-xs text-slate-500"> Secure Context: ${ssrInterpolate(unref(diagnostics).secureContext ? "Да" : "Нет")} · Permission: ${ssrInterpolate(unref(diagnostics).notificationPermission)}</p><p class="text-xs text-slate-500"> SW: ${ssrInterpolate(unref(diagnostics).hasServiceWorker ? "Да" : "Нет")} · Push API: ${ssrInterpolate(unref(diagnostics).hasPushManager ? "Да" : "Нет")} · Subscription: ${ssrInterpolate(unref(diagnostics).hasSubscription ? "Да" : "Нет")}</p></div><div class="flex gap-2"><button class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-60"${ssrIncludeBooleanAttr(unref(loading)) ? " disabled" : ""}>${ssrInterpolate(unref(loading) ? "Подключаем..." : unref(enabled) ? "Обновить ключи" : "Включить push")}</button></div></div><div class="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-3 dark:bg-slate-800"><div><p class="text-sm font-medium">Dark Mode</p><p class="text-xs text-slate-500">Текущая тема: ${ssrInterpolate(unref(mode))}</p></div><button class="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-white hover:bg-slate-600"> Toggle </button></div></div></div>`);
       _push(ssrRenderComponent(_component_SyncStatusBadge, {
         online: unref(syncStatus).online,
         syncing: unref(syncStatus).syncing,
@@ -230,4 +199,4 @@ _sfc_main.setup = (props, ctx) => {
 };
 
 export { _sfc_main as default };
-//# sourceMappingURL=settings-VoW63e_h.mjs.map
+//# sourceMappingURL=settings-C19yGwW3.mjs.map

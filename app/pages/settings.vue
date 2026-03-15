@@ -13,7 +13,6 @@ const {
   loading,
   diagnostics,
   enablePush,
-  showLocalTestNotification,
   syncPushStatus,
   refreshDiagnostics,
 } = usePush();
@@ -29,48 +28,6 @@ onMounted(async () => {
 const activatePush = async () => {
   const ok = await enablePush();
   push(ok ? "Push включены" : "Push не подключены", ok ? "success" : "error");
-};
-
-const testPush = async () => {
-  try {
-    const res = await fetch("/api/debug/trigger");
-    const data = await res.json();
-    const sentCount = Array.isArray(data.results)
-      ? data.results.filter(
-          (item: { status: string }) => item.status === "sent",
-        ).length
-      : 0;
-    const hasExpiredSubscription = Array.isArray(data.results)
-      ? data.results.some(
-          (item: { statusCode?: number }) => item.statusCode === 410,
-        )
-      : false;
-    if (hasExpiredSubscription) {
-      push("Подписка истекла. Нажмите «Обновить ключи».", "error");
-      return;
-    }
-    if (data.ok && sentCount > 0) {
-      push(
-        "Push отправлен. Если нет системного баннера, проверьте режим фокуса ОС.",
-        "success",
-      );
-    } else {
-      push("Нет активных уведомлений для отправки", "info");
-    }
-  } catch (e) {
-    push("Ошибка запроса теста", "error");
-    console.error(e);
-  }
-};
-
-const testLocalNotification = async () => {
-  const ok = await showLocalTestNotification();
-  push(
-    ok
-      ? "Локальное системное уведомление отправлено"
-      : "Не удалось показать локальное уведомление",
-    ok ? "success" : "error",
-  );
 };
 </script>
 
@@ -99,20 +56,6 @@ const testLocalNotification = async () => {
             </p>
           </div>
           <div class="flex gap-2">
-            <button
-              v-if="enabled"
-              class="rounded-lg bg-slate-200 px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600"
-              @click="testPush"
-            >
-              Test Push
-            </button>
-            <button
-              v-if="enabled"
-              class="rounded-lg bg-slate-200 px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600"
-              @click="testLocalNotification"
-            >
-              Local Notify
-            </button>
             <button
               class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-60"
               :disabled="loading"

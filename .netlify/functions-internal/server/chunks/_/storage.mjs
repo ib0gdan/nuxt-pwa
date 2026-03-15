@@ -75,40 +75,9 @@ const getUserReminders = async (userId) => {
 const setUserReminders = async (userId, reminders) => {
   await writeJson(`reminders:${userId}`, reminders);
 };
-const getAllReminderEntries = async () => {
-  const listed = await store.list({ prefix: "reminders:" });
-  const entries = await Promise.all(
-    listed.blobs.map(async (blob) => ({
-      userId: blob.key.replace("reminders:", ""),
-      reminders: await getUserReminders(blob.key.replace("reminders:", ""))
-    }))
-  );
-  return entries;
-};
 const saveSubscription = async (userId, subscription) => {
   await writeJson(`subscription:${userId}`, subscription);
 };
-const getSubscription = async (userId) => {
-  return readJson(
-    `subscription:${userId}`,
-    null
-  );
-};
-const getDeliveredIds = async (userId) => {
-  return readJson(`delivered:${userId}`, []);
-};
-const deleteSubscription = async (userId) => {
-  const results = await Promise.allSettled([
-    store.set(`subscription:${userId}`, ""),
-    fallbackStore.set(`subscription:${userId}`, "")
-  ]);
-  if (results[0].status === "rejected") {
-    throw results[0].reason;
-  }
-};
-const saveDeliveredIds = async (userId, ids) => {
-  await writeJson(`delivered:${userId}`, ids);
-};
 
-export { getSubscription as a, getDeliveredIds as b, saveSubscription as c, deleteSubscription as d, getUserReminders as e, setUserReminders as f, getAllReminderEntries as g, saveDeliveredIds as s };
+export { setUserReminders as a, getUserReminders as g, saveSubscription as s };
 //# sourceMappingURL=storage.mjs.map

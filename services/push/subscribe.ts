@@ -140,23 +140,3 @@ export const collectPushClientDiagnostics =
       serviceWorkerScope: registration?.scope ?? null,
     };
   };
-
-export const showLocalTestNotification = async (): Promise<boolean> => {
-  if (!("serviceWorker" in navigator) || !("Notification" in window)) {
-    return false;
-  }
-  if (Notification.permission !== "granted") {
-    return false;
-  }
-  const registration = await navigator.serviceWorker.getRegistration();
-  if (!registration) {
-    return false;
-  }
-  await registration.showNotification("Локальный тест уведомления", {
-    body: "Это fallback-проверка показа системного уведомления на текущем устройстве.",
-    icon: "/icons/icon-192.svg",
-    badge: "/icons/icon-192.svg",
-    data: { url: "/" },
-  });
-  return true;
-};

@@ -3,7 +3,6 @@ import {
   collectPushClientDiagnostics,
   ensurePushSubscription,
   requestNotificationsPermission,
-  showLocalTestNotification,
 } from "../services/push/subscribe";
 import { getClientId } from "../utils/clientId";
 
@@ -83,7 +82,6 @@ export const usePush = () => {
     loading,
     diagnostics,
     enablePush,
-    showLocalTestNotification,
     syncPushStatus,
     refreshDiagnostics,
   };

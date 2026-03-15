@@ -14,6 +14,9 @@ import {
 } from "../../utils/push-delivery";
 
 export default defineEventHandler(async () => {
+  if (process.env.NODE_ENV === "production") {
+    throw createError({ statusCode: 404, statusMessage: "Not found" });
+  }
   const config = useRuntimeConfig();
   const publicKey = config.public.webPushPublicKey;
   const privateKey = config.webPushPrivateKey;

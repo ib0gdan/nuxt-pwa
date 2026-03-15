@@ -63,8 +63,14 @@ yarn build
 2. Build command: `yarn build`.
 3. Publish directory: `dist`.
 4. Functions directory: `netlify/functions` (уже задано в `netlify.toml`).
-5. Добавьте env-переменные из `.env.example` в Netlify UI.
-6. Убедитесь, что функция `sendReminder` доступна как Scheduled Function (каждую минуту).
+5. Добавьте переменные окружения в Netlify UI:
+   - `NUXT_PUBLIC_WEB_PUSH_PUBLIC_KEY`
+   - `WEB_PUSH_PRIVATE_KEY`
+   - `WEB_PUSH_SUBJECT`
+   - `NUXT_PUBLIC_API_BASE=/api`
+6. Используйте одну и ту же VAPID-пару ключей для клиента и serverless-функции в одном окружении.
+7. После изменения VAPID-ключей переподпишите push на клиенте кнопкой «Обновить ключи».
+8. Убедитесь, что функция `sendReminder` доступна как Scheduled Function (каждую минуту).
 
 ## Как работают push-уведомления
 
