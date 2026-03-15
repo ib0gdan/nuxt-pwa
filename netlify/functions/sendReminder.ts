@@ -1,4 +1,4 @@
-import type { Config, Handler } from "@netlify/functions";
+import { schedule } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
 import webpush from "web-push";
 import type { Reminder } from "../../types/reminder";
@@ -43,7 +43,7 @@ const deleteSubscription = async (userId: string): Promise<void> => {
   await store.set(`subscription:${userId}`, "");
 };
 
-export const handler: Handler = async () => {
+const runReminderDelivery = async () => {
   const publicKey = process.env.NUXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
   const privateKey = process.env.WEB_PUSH_PRIVATE_KEY;
   const subject = process.env.WEB_PUSH_SUBJECT || "mailto:admin@vibe-sync.app";
@@ -145,6 +145,8 @@ export const handler: Handler = async () => {
   };
 };
 
-export const config: Config = {
-  schedule: "*/1 * * * *",
-};
+export const handler = schedule("*/1 * * * *", async (event) => {
+  const payload = await runReminderDelivery();
+  console.info("[push-cron] invoked", { nextRun: event.next_run });
+  return payload;
+});
