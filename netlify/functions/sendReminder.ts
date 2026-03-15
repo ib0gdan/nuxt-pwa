@@ -18,10 +18,14 @@ interface PushSubscriptionPayload {
 }
 
 const siteID = process.env.NETLIFY_SITE_ID;
-const token = process.env.NETLIFY_API_TOKEN || process.env.NETLIFY_AUTH_TOKEN || process.env.NETLIFY_TOKEN;
-const store = siteID && token
-  ? getStore({ name: "vibe-sync", siteID, token })
-  : getStore("vibe-sync");
+const token =
+  process.env.NETLIFY_API_TOKEN ||
+  process.env.NETLIFY_AUTH_TOKEN ||
+  process.env.NETLIFY_TOKEN;
+const store =
+  siteID && token
+    ? getStore({ name: "vibe-sync", siteID, token })
+    : getStore("vibe-sync");
 
 const readJson = async <T>(key: string, fallback: T): Promise<T> => {
   const raw = await store.get(key, { type: "text" });
@@ -54,7 +58,11 @@ export const handler: Handler = async () => {
   webpush.setVapidDetails(subject, publicKey, privateKey);
 
   const list = await store.list({ prefix: "reminders:" });
-  const failures: Array<{ userId: string; reminderId: string; statusCode?: number }> = [];
+  const failures: Array<{
+    userId: string;
+    reminderId: string;
+    statusCode?: number;
+  }> = [];
   let sentCount = 0;
   let usersWithSubscription = 0;
   let dueCount = 0;
@@ -76,8 +84,17 @@ export const handler: Handler = async () => {
     const delivered = new Set(
       await readJson<string[]>(`delivered:${userId}`, []),
     );
+    const timezoneOffsetMinutes = await readJson<number | null>(
+      `timezone:${userId}`,
+      null,
+    );
 
-    const due = collectDueUndelivered(reminders, delivered);
+    const due = collectDueUndelivered(
+      reminders,
+      delivered,
+      Date.now(),
+      timezoneOffsetMinutes ?? undefined,
+    );
     dueCount += due.length;
     for (const reminder of due) {
       try {
@@ -90,11 +107,22 @@ export const handler: Handler = async () => {
         console.info("[push-cron] sent", { userId, reminderId: reminder.id });
       } catch (error) {
         const info = toPushDeliveryError(error);
-        console.error("[push-cron] failed", { userId, reminderId: reminder.id, ...info });
-        failures.push({ userId, reminderId: reminder.id, statusCode: info.statusCode });
+        console.error("[push-cron] failed", {
+          userId,
+          reminderId: reminder.id,
+          ...info,
+        });
+        failures.push({
+          userId,
+          reminderId: reminder.id,
+          statusCode: info.statusCode,
+        });
         if (shouldDropSubscription(info.statusCode)) {
           await deleteSubscription(userId);
-          console.info("[push-cron] subscription removed", { userId, statusCode: info.statusCode });
+          console.info("[push-cron] subscription removed", {
+            userId,
+            statusCode: info.statusCode,
+          });
           break;
         }
       }

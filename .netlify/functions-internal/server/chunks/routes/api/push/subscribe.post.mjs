@@ -1,5 +1,5 @@
 import { d as defineEventHandler, r as readBody, c as createError } from '../../../nitro/nitro.mjs';
-import { s as saveSubscription } from '../../../_/storage.mjs';
+import { s as saveSubscription, a as saveUserTimezoneOffset } from '../../../_/storage.mjs';
 import 'node:http';
 import 'node:https';
 import 'node:events';
@@ -16,6 +16,9 @@ const subscribe_post = defineEventHandler(async (event) => {
   }
   try {
     await saveSubscription(body.userId, body.subscription);
+    if (typeof body.timezoneOffsetMinutes === "number") {
+      await saveUserTimezoneOffset(body.userId, body.timezoneOffsetMinutes);
+    }
     console.info("[push-subscribe] saved", { userId: body.userId });
     return { ok: true };
   } catch (error) {

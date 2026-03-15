@@ -119,6 +119,19 @@ export const saveSubscription = async (
   await writeJson(`subscription:${userId}`, subscription);
 };
 
+export const saveUserTimezoneOffset = async (
+  userId: string,
+  timezoneOffsetMinutes: number,
+): Promise<void> => {
+  await writeJson(`timezone:${userId}`, timezoneOffsetMinutes);
+};
+
+export const getUserTimezoneOffset = async (
+  userId: string,
+): Promise<number | null> => {
+  return readJson<number | null>(`timezone:${userId}`, null);
+};
+
 export const getSubscription = async (
   userId: string,
 ): Promise<PushSubscriptionPayload | null> => {

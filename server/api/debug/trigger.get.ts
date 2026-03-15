@@ -4,6 +4,7 @@ import {
   getAllReminderEntries,
   getDeliveredIds,
   getSubscription,
+  getUserTimezoneOffset,
   saveDeliveredIds,
 } from "../../utils/storage";
 import {
@@ -44,9 +45,15 @@ export default defineEventHandler(async () => {
     }
 
     const delivered = new Set(await getDeliveredIds(userId));
+    const timezoneOffsetMinutes = await getUserTimezoneOffset(userId);
     const now = Date.now();
 
-    const due = collectDueUndelivered(reminders, delivered, now);
+    const due = collectDueUndelivered(
+      reminders,
+      delivered,
+      now,
+      timezoneOffsetMinutes ?? undefined,
+    );
 
     let sentCount = 0;
 

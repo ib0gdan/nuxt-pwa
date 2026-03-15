@@ -1,5 +1,5 @@
 import { d as defineEventHandler, r as readBody } from '../../../nitro/nitro.mjs';
-import { g as getUserReminders, a as setUserReminders } from '../../../_/storage.mjs';
+import { g as getUserReminders, b as setUserReminders } from '../../../_/storage.mjs';
 import 'node:http';
 import 'node:https';
 import 'node:events';
@@ -9,12 +9,9 @@ import 'node:path';
 import 'node:crypto';
 import '@netlify/blobs';
 
-const toDueAt = (date, time) => {
-  return (/* @__PURE__ */ new Date(`${date}T${time}:00`)).getTime();
-};
 const normalizeReminder = (item) => ({
   ...item,
-  dueAt: typeof item.dueAt === "number" ? item.dueAt : toDueAt(item.date, item.time)
+  dueAt: typeof item.dueAt === "number" ? item.dueAt : void 0
 });
 const applyOperation = (reminders, operation) => {
   if (operation.action === "create" || operation.action === "update") {
@@ -22,7 +19,9 @@ const applyOperation = (reminders, operation) => {
     if (!payload) {
       return reminders;
     }
-    const filtered = reminders.filter((item) => item.id !== operation.reminderId);
+    const filtered = reminders.filter(
+      (item) => item.id !== operation.reminderId
+    );
     return [...filtered, normalizeReminder(payload)];
   }
   if (operation.action === "delete") {
@@ -38,8 +37,8 @@ const sync_post = defineEventHandler(async (event) => {
   const merged = operations.reduce(applyOperation, current);
   const normalized = [...merged].sort((a, b) => {
     var _a, _b;
-    const aTs = (_a = a.dueAt) != null ? _a : toDueAt(a.date, a.time);
-    const bTs = (_b = b.dueAt) != null ? _b : toDueAt(b.date, b.time);
+    const aTs = (_a = a.dueAt) != null ? _a : (/* @__PURE__ */ new Date(`${a.date}T${a.time}:00`)).getTime();
+    const bTs = (_b = b.dueAt) != null ? _b : (/* @__PURE__ */ new Date(`${b.date}T${b.time}:00`)).getTime();
     if (aTs !== bTs) {
       return aTs - bTs;
     }

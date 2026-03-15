@@ -2,7 +2,7 @@ import { _ as __nuxt_component_0 } from './SyncStatusBadge-C5_f4RRS.mjs';
 import { defineComponent, mergeProps, unref, ref, useSSRContext } from 'vue';
 import { ssrRenderAttrs, ssrInterpolate, ssrIncludeBooleanAttr, ssrRenderComponent } from 'vue/server-renderer';
 import { storeToRefs } from 'pinia';
-import { u as useRemindersStore, g as getClientId } from './reminders-SNlLXapx.mjs';
+import { u as useRemindersStore, g as getClientId } from './reminders-CiLr1Zg2.mjs';
 import { e as useTheme, b as useToasts, c as useState, d as useRuntimeConfig } from './server.mjs';
 import 'dexie';
 import '../nitro/nitro.mjs';
@@ -87,7 +87,11 @@ const ensurePushSubscription = async (vapidKey, userId, subscribeUrl = "/api/pus
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ subscription: payload, userId })
+    body: JSON.stringify({
+      subscription: payload,
+      userId,
+      timezoneOffsetMinutes: (/* @__PURE__ */ new Date()).getTimezoneOffset()
+    })
   });
   if (!response.ok) {
     throw new Error("Failed to save push subscription");
@@ -199,4 +203,4 @@ _sfc_main.setup = (props, ctx) => {
 };
 
 export { _sfc_main as default };
-//# sourceMappingURL=settings-BfIMsWKC.mjs.map
+//# sourceMappingURL=settings-BMLqHWVi.mjs.map

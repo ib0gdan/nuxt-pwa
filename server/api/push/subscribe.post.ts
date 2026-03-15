@@ -1,9 +1,10 @@
 import type { PushSubscriptionPayload } from "../../../types/push";
-import { saveSubscription } from "../../utils/storage";
+import { saveSubscription, saveUserTimezoneOffset } from "../../utils/storage";
 
 interface SubscribeBody {
   userId: string;
   subscription: PushSubscriptionPayload;
+  timezoneOffsetMinutes?: number;
 }
 
 export default defineEventHandler(async (event) => {
@@ -13,6 +14,9 @@ export default defineEventHandler(async (event) => {
   }
   try {
     await saveSubscription(body.userId, body.subscription);
+    if (typeof body.timezoneOffsetMinutes === "number") {
+      await saveUserTimezoneOffset(body.userId, body.timezoneOffsetMinutes);
+    }
     console.info("[push-subscribe] saved", { userId: body.userId });
     return { ok: true };
   } catch (error) {

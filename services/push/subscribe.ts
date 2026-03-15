@@ -93,7 +93,11 @@ export const ensurePushSubscription = async (
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ subscription: payload, userId }),
+    body: JSON.stringify({
+      subscription: payload,
+      userId,
+      timezoneOffsetMinutes: new Date().getTimezoneOffset(),
+    }),
   });
   if (!response.ok) {
     throw new Error("Failed to save push subscription");

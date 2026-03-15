@@ -3,7 +3,7 @@ import { defineComponent, mergeProps, useSSRContext } from 'vue';
 import { ssrRenderAttrs, ssrRenderComponent } from 'vue/server-renderer';
 import { useRouter } from 'vue-router';
 import { b as useToasts } from './server.mjs';
-import { u as useRemindersStore } from './reminders-SNlLXapx.mjs';
+import { u as useRemindersStore } from './reminders-CiLr1Zg2.mjs';
 import '../nitro/nitro.mjs';
 import 'node:http';
 import 'node:https';
@@ -48,4 +48,4 @@ _sfc_main.setup = (props, ctx) => {
 };
 
 export { _sfc_main as default };
-//# sourceMappingURL=create-z8jaRAfz.mjs.map
+//# sourceMappingURL=create-BiMlNY0w.mjs.map

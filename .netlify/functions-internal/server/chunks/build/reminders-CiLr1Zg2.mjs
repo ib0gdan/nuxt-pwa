@@ -78,7 +78,10 @@ const updateReminder = async (reminderId, payload) => {
   const updated = {
     ...existing,
     ...payload,
-    dueAt: toDueAt$1(payload.date ?? existing.date, payload.time ?? existing.time),
+    dueAt: toDueAt$1(
+      payload.date ?? existing.date,
+      payload.time ?? existing.time
+    ),
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
   await db.reminders.put(updated);
@@ -391,4 +394,4 @@ const useRemindersStore = defineStore("reminders", {
 });
 
 export { getClientId as g, useRemindersStore as u };
-//# sourceMappingURL=reminders-SNlLXapx.mjs.map
+//# sourceMappingURL=reminders-CiLr1Zg2.mjs.map
