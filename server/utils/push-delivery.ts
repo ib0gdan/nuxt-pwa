@@ -1,7 +1,12 @@
 import type { Reminder } from "../../types/reminder";
 
-export const isDueReminder = (item: Pick<Reminder, "date" | "time">, now = Date.now()): boolean => {
-  const dueAt = new Date(`${item.date}T${item.time}:00`).getTime();
+export const isDueReminder = (
+  item: Pick<Reminder, "date" | "time" | "dueAt">,
+  now = Date.now(),
+): boolean => {
+  const dueAt = typeof item.dueAt === "number"
+    ? item.dueAt
+    : new Date(`${item.date}T${item.time}:00`).getTime();
   return Number.isFinite(dueAt) && dueAt <= now;
 };
 

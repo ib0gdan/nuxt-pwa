@@ -7,6 +7,15 @@ interface SyncBody {
   operations: QueueOperation[];
 }
 
+const toDueAt = (date: string, time: string): number => {
+  return new Date(`${date}T${time}:00`).getTime();
+};
+
+const normalizeReminder = (item: Reminder): Reminder => ({
+  ...item,
+  dueAt: typeof item.dueAt === "number" ? item.dueAt : toDueAt(item.date, item.time),
+});
+
 const applyOperation = (reminders: Reminder[], operation: QueueOperation): Reminder[] => {
   if (operation.action === "create" || operation.action === "update") {
     const payload = operation.payload as Reminder | undefined;
@@ -14,7 +23,7 @@ const applyOperation = (reminders: Reminder[], operation: QueueOperation): Remin
       return reminders;
     }
     const filtered = reminders.filter((item) => item.id !== operation.reminderId);
-    return [...filtered, payload];
+    return [...filtered, normalizeReminder(payload)];
   }
 
   if (operation.action === "delete") {
@@ -28,11 +37,11 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<SyncBody>(event);
   const userId = body?.userId || "anonymous";
   const operations = body?.operations || [];
-  const current = await getUserReminders(userId);
+  const current = (await getUserReminders(userId)).map(normalizeReminder);
   const merged = operations.reduce(applyOperation, current);
   const normalized = [...merged].sort((a, b) => {
-    const aTs = new Date(`${a.date}T${a.time}:00`).getTime();
-    const bTs = new Date(`${b.date}T${b.time}:00`).getTime();
+    const aTs = a.dueAt ?? toDueAt(a.date, a.time);
+    const bTs = b.dueAt ?? toDueAt(b.date, b.time);
     if (aTs !== bTs) {
       return aTs - bTs;
     }
@@ -45,4 +54,3 @@ export default defineEventHandler(async (event) => {
     reminders: normalized,
   };
 });
-

@@ -35,9 +35,12 @@ const getClientId = () => {
     return "server";
   }
 };
+const toDueAt$1 = (date, time) => {
+  return (/* @__PURE__ */ new Date(`${date}T${time}:00`)).getTime();
+};
 const sortReminders = (items) => [...items].sort((a, b) => {
-  const aTs = (/* @__PURE__ */ new Date(`${a.date}T${a.time}:00`)).getTime();
-  const bTs = (/* @__PURE__ */ new Date(`${b.date}T${b.time}:00`)).getTime();
+  const aTs = a.dueAt ?? toDueAt$1(a.date, a.time);
+  const bTs = b.dueAt ?? toDueAt$1(b.date, b.time);
   if (aTs !== bTs) {
     return aTs - bTs;
   }
@@ -56,6 +59,7 @@ const addReminder = async (payload) => {
     description: payload.description,
     date: payload.date,
     time: payload.time,
+    dueAt: toDueAt$1(payload.date, payload.time),
     completed: false,
     createdAt: now,
     updatedAt: now,
@@ -74,6 +78,7 @@ const updateReminder = async (reminderId, payload) => {
   const updated = {
     ...existing,
     ...payload,
+    dueAt: toDueAt$1(payload.date ?? existing.date, payload.time ?? existing.time),
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
   await db.reminders.put(updated);
@@ -125,6 +130,9 @@ const triggerBackgroundSync = async () => {
     return;
   }
   await registerBackgroundSync();
+};
+const toDueAt = (date, time) => {
+  return (/* @__PURE__ */ new Date(`${date}T${time}:00`)).getTime();
 };
 const initialSyncStatus = {
   online: true,
@@ -221,6 +229,7 @@ const useRemindersStore = defineStore("reminders", {
           description: payload.description,
           date: payload.date,
           time: payload.time,
+          dueAt: toDueAt(payload.date, payload.time),
           completed: false,
           createdAt: now,
           updatedAt: now,
@@ -252,6 +261,7 @@ const useRemindersStore = defineStore("reminders", {
         this.reminders[index] = {
           ...backup,
           ...payload,
+          dueAt: toDueAt(payload.date ?? backup.date, payload.time ?? backup.time),
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         };
       }
@@ -381,4 +391,4 @@ const useRemindersStore = defineStore("reminders", {
 });
 
 export { getClientId as g, useRemindersStore as u };
-//# sourceMappingURL=reminders-d2dtA4vc.mjs.map
+//# sourceMappingURL=reminders-SNlLXapx.mjs.map

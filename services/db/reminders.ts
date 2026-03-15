@@ -4,14 +4,22 @@ import {
   getPendingQueue,
   removeQueueItems,
 } from "../sync/offlineQueue";
-import type { Reminder, ReminderInput, ReminderUpdate } from "../../types/reminder";
+import type {
+  Reminder,
+  ReminderInput,
+  ReminderUpdate,
+} from "../../types/reminder";
 import { getClientId } from "../../utils/clientId";
 import { createId } from "../../utils/id";
 
+const toDueAt = (date: string, time: string): number => {
+  return new Date(`${date}T${time}:00`).getTime();
+};
+
 const sortReminders = (items: Reminder[]): Reminder[] =>
   [...items].sort((a, b) => {
-    const aTs = new Date(`${a.date}T${a.time}:00`).getTime();
-    const bTs = new Date(`${b.date}T${b.time}:00`).getTime();
+    const aTs = a.dueAt ?? toDueAt(a.date, a.time);
+    const bTs = b.dueAt ?? toDueAt(b.date, b.time);
     if (aTs !== bTs) {
       return aTs - bTs;
     }
@@ -23,7 +31,9 @@ export const getReminders = async (): Promise<Reminder[]> => {
   return sortReminders(items);
 };
 
-export const addReminder = async (payload: ReminderInput): Promise<Reminder> => {
+export const addReminder = async (
+  payload: ReminderInput,
+): Promise<Reminder> => {
   const now = new Date().toISOString();
   const currentCount = await db.reminders.count();
   const reminder: Reminder = {
@@ -32,6 +42,7 @@ export const addReminder = async (payload: ReminderInput): Promise<Reminder> => 
     description: payload.description,
     date: payload.date,
     time: payload.time,
+    dueAt: toDueAt(payload.date, payload.time),
     completed: false,
     createdAt: now,
     updatedAt: now,
@@ -57,6 +68,10 @@ export const updateReminder = async (
   const updated: Reminder = {
     ...existing,
     ...payload,
+    dueAt: toDueAt(
+      payload.date ?? existing.date,
+      payload.time ?? existing.time,
+    ),
     updatedAt: new Date().toISOString(),
   };
 
@@ -70,7 +85,9 @@ export const deleteReminder = async (reminderId: string): Promise<void> => {
   await enqueueOperation("delete", reminderId);
 };
 
-export const replaceAllReminders = async (reminders: Reminder[]): Promise<void> => {
+export const replaceAllReminders = async (
+  reminders: Reminder[],
+): Promise<void> => {
   await db.transaction("rw", db.reminders, async () => {
     await db.reminders.clear();
     await db.reminders.bulkPut(reminders);
@@ -87,7 +104,10 @@ export const syncReminders = async (): Promise<void> => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ operations: queue, userId }),
   });
-  const data = (await response.json()) as { syncedIds: string[]; reminders: Reminder[] };
+  const data = (await response.json()) as {
+    syncedIds: string[];
+    reminders: Reminder[];
+  };
 
   await db.transaction("rw", db.queue, db.reminders, async () => {
     if (queue.length) {

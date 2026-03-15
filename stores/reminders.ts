@@ -20,6 +20,10 @@ import { getClientId } from "../utils/clientId";
 
 type SortDirection = "asc" | "desc";
 
+const toDueAt = (date: string, time: string): number => {
+  return new Date(`${date}T${time}:00`).getTime();
+};
+
 const initialSyncStatus: SyncStatus = {
   online: true,
   syncing: false,
@@ -117,6 +121,7 @@ export const useRemindersStore = defineStore("reminders", {
           description: payload.description,
           date: payload.date,
           time: payload.time,
+          dueAt: toDueAt(payload.date, payload.time),
           completed: false,
           createdAt: now,
           updatedAt: now,
@@ -148,6 +153,7 @@ export const useRemindersStore = defineStore("reminders", {
         this.reminders[index] = {
           ...backup,
           ...payload,
+          dueAt: toDueAt(payload.date ?? backup.date, payload.time ?? backup.time),
           updatedAt: new Date().toISOString(),
         };
       }

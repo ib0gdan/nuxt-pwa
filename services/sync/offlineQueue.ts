@@ -5,7 +5,7 @@ import { createId } from "../../utils/id";
 export const enqueueOperation = async (
   action: SyncAction,
   reminderId: string,
-  payload?: Record<string, unknown>,
+  payload?: QueueOperation["payload"],
 ): Promise<QueueOperation> => {
   const operation: QueueOperation = {
     id: createId(),

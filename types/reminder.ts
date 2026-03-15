@@ -6,6 +6,7 @@ export interface Reminder {
   description: string;
   date: string;
   time: string;
+  dueAt?: number;
   completed: boolean;
   createdAt: string;
   updatedAt: string;
@@ -27,4 +28,3 @@ export interface ReminderUpdate extends Partial<ReminderInput> {
 }
 
 export type ReminderFilter = "all" | "active" | "completed";
-

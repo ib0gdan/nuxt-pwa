@@ -9,6 +9,13 @@ import 'node:path';
 import 'node:crypto';
 import '@netlify/blobs';
 
+const toDueAt = (date, time) => {
+  return (/* @__PURE__ */ new Date(`${date}T${time}:00`)).getTime();
+};
+const normalizeReminder = (item) => ({
+  ...item,
+  dueAt: typeof item.dueAt === "number" ? item.dueAt : toDueAt(item.date, item.time)
+});
 const applyOperation = (reminders, operation) => {
   if (operation.action === "create" || operation.action === "update") {
     const payload = operation.payload;
@@ -16,7 +23,7 @@ const applyOperation = (reminders, operation) => {
       return reminders;
     }
     const filtered = reminders.filter((item) => item.id !== operation.reminderId);
-    return [...filtered, payload];
+    return [...filtered, normalizeReminder(payload)];
   }
   if (operation.action === "delete") {
     return reminders.filter((item) => item.id !== operation.reminderId);
@@ -27,11 +34,12 @@ const sync_post = defineEventHandler(async (event) => {
   const body = await readBody(event);
   const userId = (body == null ? void 0 : body.userId) || "anonymous";
   const operations = (body == null ? void 0 : body.operations) || [];
-  const current = await getUserReminders(userId);
+  const current = (await getUserReminders(userId)).map(normalizeReminder);
   const merged = operations.reduce(applyOperation, current);
   const normalized = [...merged].sort((a, b) => {
-    const aTs = (/* @__PURE__ */ new Date(`${a.date}T${a.time}:00`)).getTime();
-    const bTs = (/* @__PURE__ */ new Date(`${b.date}T${b.time}:00`)).getTime();
+    var _a, _b;
+    const aTs = (_a = a.dueAt) != null ? _a : toDueAt(a.date, a.time);
+    const bTs = (_b = b.dueAt) != null ? _b : toDueAt(b.date, b.time);
     if (aTs !== bTs) {
       return aTs - bTs;
     }
